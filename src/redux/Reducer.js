@@ -26,7 +26,7 @@ function dataReducer(state = initialState, action) {
       return {
         ...state,
         history: state.history.filter(
-          obj => obj.index !== action.payload.index,
+          obj => obj.place_id !== action.payload,
         ),
       };
     case STORE_GEOMETRY:

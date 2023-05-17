@@ -21,6 +21,8 @@ import {
   storeGeometry,
 } from '../redux/Action';
 import Map from './Map';
+import {API_KEY} from '@env';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const Home = () => {
   const [input, setInput] = useState('');
@@ -32,10 +34,11 @@ const Home = () => {
 
   const _autoComplete = value => {
     let input = `input=${value}&types=geocode`;
+    let api_key = API_KEY;
 
     let config = {
       method: 'get',
-      url: `https://maps.googleapis.com/maps/api/place/autocomplete/json?key=AIzaSyCFmqud16ue6P1P-gIYr4OXX2d7hOUXToY&${input}`,
+      url: `https://maps.googleapis.com/maps/api/place/autocomplete/json?key=${api_key}&${input}`,
       headers: {},
     };
 
@@ -51,15 +54,20 @@ const Home = () => {
 
   const _findDetail = id => {
     let place_id = `place_id=${id}`;
-
+    let api_key = API_KEY;
+    console.log('od', id);
     axios
       .get(
-        `https://maps.googleapis.com/maps/api/place/details/json?key=AIzaSyCFmqud16ue6P1P-gIYr4OXX2d7hOUXToY&${place_id}`,
+        `https://maps.googleapis.com/maps/api/place/details/json?key=${api_key}&${place_id}`,
       )
       .then(resp => {
         setInput(resp.data.result.formatted_address);
 
-        if (!history.some(obj => obj.place_id == id)) {
+        if (
+          history.findIndex(
+            obj => obj.place_id == resp.data.result.place_id,
+          ) === -1
+        ) {
           dispatch(storeHistory(resp.data.result));
         }
 
@@ -79,7 +87,7 @@ const Home = () => {
 
   return (
     <ScrollView contentContainerStyle={{flex: 1}}>
-      <KeyboardAvoidingView style={{flex: 1}} behavior="height" enabled>
+      <KeyboardAvoidingView style={{flex: 1}} behavior="padding">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View>
             <SearchBar
@@ -106,50 +114,59 @@ const Home = () => {
             />
             {toggle ? null : (
               <>
-                <ScrollView>
-                  <List>
-                    {results?.map((result, index) => {
-                      return (
-                        <List.Item key={index}>
-                          <TouchableOpacity
-                            onPress={() => {
-                              _findDetail(result.place_id);
-                            }}>
-                            <Text>{result?.description}</Text>
-                          </TouchableOpacity>
-                        </List.Item>
-                      );
-                    })}
-                  </List>
-                </ScrollView>
-                <ScrollView>
-                  {history.length > 0 ? (
-                    <List renderHeader={'History'}>
-                      {history?.map((result, index) => {
-                        if (index < 5) {
-                          return (
-                            <List.Item
-                              key={index}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 40,
+                    left: 0,
+                    right: 0,
+                    zIndex: 1,
+                    backgroundColor: '#fff',
+                    maxHeight: 300,
+                  }}>
+                  <KeyboardAwareScrollView>
+                    <List>
+                      {results?.map((result, index) => {
+                        return (
+                          <List.Item key={index}>
+                            <TouchableOpacity
                               onPress={() => {
                                 _findDetail(result.place_id);
-                                setInput(result?.formatted_address);
-                              }}
-                              extra={
-                                <TouchableOpacity
-                                  onPress={() => {
-                                    dispatch(removeHistory(result.place_id));
-                                  }}>
-                                  <Text>Remove</Text>
-                                </TouchableOpacity>
-                              }>
-                              <Text>{result.formatted_address}</Text>
-                            </List.Item>
-                          );
-                        }
+                              }}>
+                              <Text>{result?.description}</Text>
+                            </TouchableOpacity>
+                          </List.Item>
+                        );
                       })}
                     </List>
-                  ) : null}
-                </ScrollView>
+                    {history.length > 0 ? (
+                      <List renderHeader={'History'}>
+                        {history?.reverse().map((result, index) => {
+                          if (index < 5) {
+                            return (
+                              <List.Item
+                                key={index}
+                                onPress={() => {
+                                  _findDetail(result.place_id);
+                                  setInput(result?.formatted_address);
+                                }}
+                                extra={
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      dispatch(removeHistory(result.place_id));
+                                    }}>
+                                    <Text>Remove</Text>
+                                  </TouchableOpacity>
+                                }>
+                                <Text>{result.formatted_address}</Text>
+                              </List.Item>
+                            );
+                          }
+                        })}
+                      </List>
+                    ) : null}
+                  </KeyboardAwareScrollView>
+                </View>
               </>
             )}
             <Map geometery={geometery} _toggleSearch={_toggleSearch} />
